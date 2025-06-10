@@ -1,0 +1,291 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Full Recovery Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <meta name="theme-color" content="#2e8b57">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      margin: 0;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #2e8b57;
+    }
+    .tracker {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    button {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 15px;
+      background: #2e8b57;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .info, .reward {
+      margin-top: 20px;
+    }
+    .reward {
+      background: #e0ffe0;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .date {
+      text-align: center;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    #rewardsIcon {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      font-size: 30px;
+      background: #2e8b57;
+      color: white;
+      padding: 10px;
+      border-radius: 50%;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    #rewardsPopup {
+      display: none;
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      width: 300px;
+      max-height: 500px;
+      overflow-y: auto;
+      background: white;
+      border: 2px solid #2e8b57;
+      border-radius: 10px;
+      padding: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      z-index: 1001;
+    }
+    #spinResult, #moneyDisplay {
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .inventory {
+      margin-top: 10px;
+      background: #f5fff5;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="rewardsIcon" onclick="toggleRewards()">🎁</div>
+  <div id="rewardsPopup">
+    <h3>All Rewards</h3>
+    <ul id="rewardsList"></ul>
+    <h4>🎲 Spin for Random Loot</h4>
+    <button id="spinButton" onclick="spinLoot()">Spin</button>
+    <p id="spinResult"></p>
+    <div class="inventory">
+      <h4>🎒 Inventory</h4>
+      <ul id="inventoryList"></ul>
+    </div>
+  </div>
+
+  <div class="tracker">
+    <h1>Full Recovery Tracker</h1>
+    <p class="date" id="currentDateTime"></p>
+
+    <button onclick="checkIn()">✅ Daily Check-In (+1000 won)</button>
+    <button onclick="relapse()">❌ Relapse</button>
+
+    <div class="info">
+      <p><strong>Current Streak:</strong> <span id="streak">0</span> days</p>
+      <p><strong>Last Check-in:</strong> <span id="lastCheck">Never</span></p>
+      <p><strong>Total Won:</strong> <span id="moneyDisplay">0</span> won</p>
+    </div>
+
+    <div class="reward">
+      <h2>Upcoming Reward</h2>
+      <p id="rewardText">Day 15: Halal dessert or drink</p>
+    </div>
+  </div>
+
+  <script>
+    const streakKey = "recoveryStreak";
+    const lastCheckKey = "lastCheckDate";
+    const moneyKey = "totalMoney";
+    const inventoryKey = "inventoryItems";
+    const lastLootKey = "lastLootDay";
+
+    const lootDays = [7,11,13,17,24,29,38,40,41,44,46,52,56,58,67,72,74,79,90,96,106,110,111,119,124,129,135,141,150,153,157,163,167,174,180,185,188,192,198,220,222,229,235,241,248,251,255,263,267,271,274,284,290,297,305,307,308,312,319,324,331,336,342,347,354,359];
+    const rewards = {
+      15: "Pilaf / Dessert",
+      30: "10,000₩ + New Pen",
+      45: "Useful Daily Item",
+      60: "Earphone / Earbuds",
+      70: "Workspace Upgrade",
+      80: "20,000₩ + Movie",
+      90: "Update Device 🍎",
+      100: "Meal Out with Friend",
+      115: "Shop Online 15,000₩",
+      130: "Go on a Trip",
+      144: "Start YouTube",
+      170: "Wireless Mic",
+      180: "Jeju Island ❤️",
+      200: "New Shoe / Hoodie",
+      225: "Budget Laptop",
+      250: "Adventure with Friend",
+      280: "AirPods ❤️",
+      300: "Celebratory Halal Dinner ❤️",
+      330: "Apple Watch SE ❤️",
+      350: "Instant Camera 📷",
+      365: "iPhone Pro ❤️"
+    };
+
+    function loadStreak() {
+      const streak = parseInt(localStorage.getItem(streakKey)) || 0;
+      const lastCheck = localStorage.getItem(lastCheckKey) || "Never";
+      const money = parseInt(localStorage.getItem(moneyKey)) || 0;
+      const inventory = JSON.parse(localStorage.getItem(inventoryKey)) || [];
+      const lastLoot = parseInt(localStorage.getItem(lastLootKey)) || 0;
+
+      document.getElementById("streak").innerText = streak;
+      document.getElementById("lastCheck").innerText = lastCheck;
+      document.getElementById("moneyDisplay").innerText = money;
+
+      for (const day in rewards) {
+        if (streak < day) {
+          document.getElementById("rewardText").innerText = `Day ${day}: ${rewards[day]}`;
+          break;
+        }
+      }
+
+      const list = document.getElementById("rewardsList");
+      list.innerHTML = "";
+      for (const day in rewards) {
+        const li = document.createElement("li");
+        li.textContent = `Day ${day}: ${rewards[day]}`;
+        list.appendChild(li);
+      }
+
+      const invList = document.getElementById("inventoryList");
+      invList.innerHTML = "";
+      inventory.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        invList.appendChild(li);
+      });
+
+      const spinButton = document.getElementById("spinButton");
+      if (lootDays.includes(streak) && lastLoot !== streak) {
+        spinButton.disabled = false;
+        spinButton.textContent = "Spin";
+      } else {
+        spinButton.disabled = true;
+        spinButton.textContent = "Spin (Locked)";
+      }
+    }
+
+    function checkIn() {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const today = now.toISOString().split('T')[0];
+      const lastCheck = localStorage.getItem(lastCheckKey);
+
+      if (currentHour < 20) {
+        alert("Check-in available only after 8:00 PM!");
+        return;
+      }
+
+      if (lastCheck === today) {
+        alert("Already checked in today.");
+        return;
+      }
+
+      let streak = parseInt(localStorage.getItem(streakKey)) || 0;
+      let money = parseInt(localStorage.getItem(moneyKey)) || 0;
+
+      streak += 1;
+      money += 1000;
+
+      localStorage.setItem(streakKey, streak);
+      localStorage.setItem(lastCheckKey, today);
+      localStorage.setItem(moneyKey, money);
+      loadStreak();
+    }
+
+    function relapse() {
+      if (confirm("Are you sure you want to reset your streak?")) {
+        localStorage.setItem(streakKey, 0);
+        localStorage.setItem(lastCheckKey, "Never");
+        localStorage.setItem(moneyKey, 0);
+        localStorage.setItem(inventoryKey, JSON.stringify([]));
+        localStorage.setItem(lastLootKey, 0);
+        loadStreak();
+      }
+    }
+
+    function toggleRewards() {
+      const popup = document.getElementById("rewardsPopup");
+      popup.style.display = popup.style.display === "none" ? "block" : "none";
+    }
+
+    function spinLoot() {
+      const streak = parseInt(localStorage.getItem(streakKey)) || 0;
+      const lastLoot = parseInt(localStorage.getItem(lastLootKey)) || 0;
+
+      if (!lootDays.includes(streak) || lastLoot === streak) {
+        alert("You can't spin today!");
+        return;
+      }
+
+      const gifts = ["Favourite chocolate", "Halal drinks", "Call a random friend", "Visit a park", "Extra sleep", "Buy something 5000₩", "Play with friends"];
+      const randomGift = gifts[Math.floor(Math.random() * gifts.length)];
+
+      let inventory = JSON.parse(localStorage.getItem(inventoryKey)) || [];
+      inventory.push(`Day ${streak}: ${randomGift}`);
+      localStorage.setItem(inventoryKey, JSON.stringify(inventory));
+      localStorage.setItem(lastLootKey, streak);
+
+      document.getElementById("spinResult").innerText = `🎉 You got: ${randomGift}!`;
+      loadStreak();
+    }
+
+    function updateTime() {
+      const now = new Date();
+      document.getElementById("currentDateTime").innerText = now.toLocaleString();
+    }
+
+    setInterval(updateTime, 1000);
+    loadStreak();
+    updateTime();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('Service Worker Registered'))
+          .catch(err => console.error('Service Worker Error:', err));
+      });
+    }
+  </script>
+</body>
+</html>

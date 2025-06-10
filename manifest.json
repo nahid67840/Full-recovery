@@ -1,0 +1,22 @@
+
+{
+  "name": "Full Recovery Tracker",
+  "short_name": "RecoveryTracker",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f0f8ff",
+  "theme_color": "#2e8b57",
+  "description": "Track your recovery journey with daily check-ins and rewards.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
