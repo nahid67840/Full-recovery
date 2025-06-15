@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -207,14 +206,8 @@
 
     function checkIn() {
       const now = new Date();
-      const currentHour = now.getHours();
       const today = now.toISOString().split('T')[0];
       const lastCheck = localStorage.getItem(lastCheckKey);
-
-      if (currentHour < 20) {
-        alert("Check-in available only after 8:00 PM!");
-        return;
-      }
 
       if (lastCheck === today) {
         alert("Already checked in today.");
@@ -223,6 +216,11 @@
 
       let streak = parseInt(localStorage.getItem(streakKey)) || 0;
       let money = parseInt(localStorage.getItem(moneyKey)) || 0;
+
+      // If last check was not yesterday, reset streak
+      if (lastCheck && new Date(today) - new Date(lastCheck) > 86400000) {
+        streak = 0;
+      }
 
       streak += 1;
       money += 1000;
